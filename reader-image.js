@@ -1,0 +1,2 @@
+const IMAGE_PARTS={"bala":3,"ayodhya":3,"aranya":3,"kishkindha":3,"sundara":3,"yuddha":3};
+(async()=>{for(const img of document.querySelectorAll('img[data-image-key]')){const k=img.dataset.imageKey,n=IMAGE_PARTS[k]||0;if(!n)continue;try{const parts=await Promise.all(Array.from({length:n},(_,i)=>fetch(`assets/b64/${k}-${i}.txt`).then(r=>{if(!r.ok)throw new Error(r.status);return r.text()})));img.src=`data:image/avif;base64,${parts.join('')}`;}catch(e){console.error('Image load failed',k,e);}}})();
