@@ -11,7 +11,7 @@
   function thumbFile(lang){return 'assets/ramayanam-thumb-'+(lang==='te'?'te':lang==='hi'?'hi':'en')+'.b64';}
   function loadRamayanamThumb(lang){
     var imgs=document.querySelectorAll('[data-ramayanam-thumb]'); if(!imgs.length) return;
-    fetch(thumbFile(lang)).then(function(r){if(!r.ok) throw new Error('thumb');return r.text();}).then(function(b64){var uri='data:image/jpeg;base64,'+b64.trim();imgs.forEach(function(img){img.src=uri;});}).catch(function(){});
+    fetch(thumbFile(lang)).then(function(r){if(!r.ok) throw new Error('thumb');return r.text();}).then(function(b64){var uri='data:image/jpeg;base64,'+b64.replace(/\s+/g,'');imgs.forEach(function(img){img.src=uri;});}).catch(function(){});
   }
   function installNav(){
     var nav=document.querySelector('.topbar nav');if(!nav)return;nav.innerHTML='';
