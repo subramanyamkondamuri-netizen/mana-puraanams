@@ -1,4 +1,6 @@
 (function(){
+  var ANALYTICS_URL='https://rwyuywfjouzrfsbpudlc.supabase.co/rest/v1/analytics_hits';
+  var ANALYTICS_KEY='sb_publishable_kdHyzS1SFfAhwEQMfjZR7A_-kHn9-lI';
   function translateUrl(lang){
     var clean=window.location.href.split('#')[0];
     return 'https://translate.google.com/translate?sl=en&tl='+encodeURIComponent(lang)+'&u='+encodeURIComponent(clean);
@@ -27,15 +29,32 @@
   }
   function installAnalyticsNotice(){
     var footer=document.querySelector('footer');if(!footer||footer.querySelector('.analytics-note'))return;
-    var note=document.createElement('div');note.className='analytics-note';note.textContent='Traffic statistics may record IP address and basic browser/device metadata.';footer.appendChild(note);
+    var note=document.createElement('div');note.className='analytics-note';note.textContent='This site records page visits, IP address and basic browser/device metadata for traffic analytics.';footer.appendChild(note);
+  }
+  function visitorId(){
+    try{
+      var id=localStorage.getItem('mp_visitor_id');
+      if(!id){id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'v-'+Date.now()+'-'+Math.random().toString(36).slice(2);localStorage.setItem('mp_visitor_id',id);}
+      return id;
+    }catch(e){return 'v-'+Date.now()+'-'+Math.random().toString(36).slice(2);}
   }
   function trackVisit(){
     if(location.protocol!=='http:'&&location.protocol!=='https:')return;
+    if(/\/analytics\.html$/i.test(location.pathname))return;
     var tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){}
     var platform=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'';
-    var screenInfo='';try{screenInfo=screen.width+'x'+screen.height+'@'+(window.devicePixelRatio||1);}catch(e){}
-    var payload={page:location.href,title:document.title||'',referrer:document.referrer||'',language:navigator.language||document.documentElement.lang||'',timezone:tz,screen:screenInfo,platform:platform};
-    fetch('https://mana-puraanams-pdfs.onrender.com/api/hit',{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload),keepalive:true,mode:'cors'}).catch(function(){});
+    var payload={
+      page_path:(location.pathname||'/')+(location.search||''),
+      page_title:document.title||'',
+      referrer:document.referrer||'',
+      visitor_id:visitorId(),
+      browser_language:navigator.language||document.documentElement.lang||'',
+      timezone:tz,
+      screen_width:(window.screen&&screen.width)||null,
+      screen_height:(window.screen&&screen.height)||null,
+      platform:platform
+    };
+    fetch(ANALYTICS_URL,{method:'POST',headers:{apikey:ANALYTICS_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload),keepalive:true,mode:'cors'}).catch(function(){});
   }
   document.addEventListener('DOMContentLoaded',function(){installStyles();installNav();loadRamayanamThumb(detectedLanguage());installAnalyticsNotice();trackVisit();});
 })();
