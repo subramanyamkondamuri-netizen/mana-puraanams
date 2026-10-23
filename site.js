@@ -21,7 +21,7 @@
   }
   function installNav(){
     var nav=document.querySelector('.topbar nav');if(!nav)return;nav.innerHTML='';
-    [['index.html','Home'],['index.html#library','Puraanams'],['ramayanam.html','Ramayanam'],['author.html','Author'],['enquiry.html','Enquiry']].forEach(function(p){var a=document.createElement('a');a.href=p[0];a.textContent=p[1];nav.appendChild(a);});
+    [['index.html','Home'],['index.html#library','Library'],['ramayanam.html','Ramayanam'],['upanishads.html','Upanishads'],['author.html','Author'],['enquiry.html','Enquiry']].forEach(function(p){var a=document.createElement('a');a.href=p[0];a.textContent=p[1];nav.appendChild(a);});
     var wrap=document.createElement('span');wrap.className='language-control';var label=document.createElement('label');label.htmlFor='site-language';label.textContent='Language';var sel=document.createElement('select');sel.id='site-language';sel.setAttribute('aria-label','Select language');[['en','English'],['te','తెలుగు'],['hi','हिन्दी']].forEach(function(x){var o=document.createElement('option');o.value=x[0];o.textContent=x[1];sel.appendChild(o);});
     var saved=detectedLanguage();sel.value=saved;sel.addEventListener('change',function(){var lang=sel.value;localStorage.setItem('siteLanguage',lang);loadRamayanamThumb(lang);if(lang==='en'){window.location.href=window.location.href.split('#')[0];}else{setTimeout(function(){window.location.href=translateUrl(lang);},120);}});wrap.appendChild(label);wrap.appendChild(sel);nav.appendChild(wrap);
   }
