@@ -1,4 +1,5 @@
-import base64, gzip, os, re, textwrap
+import base64, gzip, os, re, textwrap, json, hashlib
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote
 
@@ -146,7 +147,67 @@ def make_pdf(key, title):
     return bytes(out)
 
 
+def clean_value(value, limit=600):
+    if value is None:
+        return ''
+    return str(value).replace('\r', ' ').replace('\n', ' ')[:limit]
+
+
 class Handler(BaseHTTPRequestHandler):
+    def cors(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.cors()
+        self.end_headers()
+
+    def do_POST(self):
+        path = unquote(self.path.split('?', 1)[0])
+        if path != '/api/hit':
+            self.send_error(404)
+            return
+
+        try:
+            length = min(int(self.headers.get('Content-Length', '0') or 0), 16384)
+            raw = self.rfile.read(length) if length else b'{}'
+            payload = json.loads(raw.decode('utf-8', 'replace'))
+        except Exception:
+            payload = {}
+
+        forwarded = self.headers.get('X-Forwarded-For', '')
+        ip = forwarded.split(',')[0].strip() if forwarded else self.client_address[0]
+        salt = os.environ.get('ANALYTICS_SALT', 'mana-puraanams-analytics')
+        visitor_id = hashlib.sha256((salt + '|' + ip).encode('utf-8')).hexdigest()[:20]
+
+        event = {
+            'event': 'page_view',
+            'timestamp_utc': datetime.now(timezone.utc).isoformat(),
+            'ip': clean_value(ip, 80),
+            'visitor_id': visitor_id,
+            'page': clean_value(payload.get('page'), 900),
+            'title': clean_value(payload.get('title'), 300),
+            'referrer': clean_value(payload.get('referrer'), 900),
+            'language': clean_value(payload.get('language'), 80),
+            'timezone': clean_value(payload.get('timezone'), 120),
+            'screen': clean_value(payload.get('screen'), 80),
+            'platform': clean_value(payload.get('platform'), 160),
+            'user_agent': clean_value(self.headers.get('User-Agent', ''), 700),
+            'accept_language': clean_value(self.headers.get('Accept-Language', ''), 220),
+        }
+        print('VISIT ' + json.dumps(event, ensure_ascii=False, separators=(',', ':')), flush=True)
+
+        body = b'{"ok":true}'
+        self.send_response(200)
+        self.cors()
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         path = unquote(self.path.split('?', 1)[0])
         if path.startswith('/pdfs/'):
@@ -169,7 +230,7 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
             return
 
-        body = b'Mana Puraanams PDF service is running.'
+        body = b'Mana Puraanams PDF and analytics service is running.'
         self.send_response(200)
         self.send_header('Content-Type', 'text/plain; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
@@ -177,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, fmt, *args):
-        print(fmt % args)
+        print(fmt % args, flush=True)
 
 
 if __name__ == '__main__':
